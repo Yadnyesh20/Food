@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import "./index.css";
 
 export default function App() {
@@ -54,83 +54,139 @@ export default function App() {
     }
   };
 
+  const processingBadgeClass = useMemo(() => {
+    if (!result) return "badge badge-neutral";
+    if (result.processingLevel.toLowerCase().includes("high")) return "badge badge-high";
+    if (result.processingLevel.toLowerCase().includes("moderate")) return "badge badge-medium";
+    return "badge badge-low";
+  }, [result]);
+
   return (
-    <div className="app-root">
+    <div className="page">
+      <div className="gradient-bg" />
       <header className="app-header">
-        <h1>Food Processing Checker</h1>
-        <p className="subtitle">
-          Upload the ingredients list and find out how processed your food is – plus how often you should eat it.
-        </p>
+        <div className="logo-chip">NutriScan AI</div>
+        <div>
+          <h1>Food Processing Checker</h1>
+          <p className="subtitle">
+            Scan your packaged food’s ingredients and get an instant, easy-to-read processing score with healthier
+            suggestions.
+          </p>
+        </div>
       </header>
 
       <main className="app-main">
         <section className="card layout">
           <div className="left-panel">
-            <h2>1. Upload ingredients image (optional)</h2>
+            <p className="step-label">Step 1</p>
+            <h2>Upload ingredients image <span className="optional-tag">optional</span></h2>
             <p className="hint">
-              This is just for visual demo. The actual analysis is based on the text you paste on the right.
+              Add a clear photo of the ingredients list. This makes your demo look realistic, even though the current
+              prototype reads the text you paste on the right.
             </p>
+
             <label className="file-upload">
               <input type="file" accept="image/*" onChange={handleFileChange} />
-              <span>Choose ingredients image</span>
+              <span>📷 Choose ingredients image</span>
             </label>
 
             {imagePreview && (
               <div className="image-preview">
-                <p className="preview-label">Preview:</p>
-                <img src={imagePreview} alt="Ingredients preview" />
+                <p className="preview-label">Preview</p>
+                <div className="image-frame">
+                  <img src={imagePreview} alt="Ingredients preview" />
+                </div>
               </div>
             )}
+
+            <div className="info-pill">
+              ℹ️ In the full product, this image would be processed with OCR and an AI model trained on food labels.
+            </div>
           </div>
 
           <div className="right-panel">
-            <h2>2. Paste ingredients text</h2>
+            <p className="step-label">Step 2</p>
+            <h2>Paste ingredients text</h2>
+            <p className="hint">
+              Copy the ingredients list from any packaged food and paste it below. The backend will classify how
+              processed it is and how often it should be eaten.
+            </p>
+
             <textarea
               className="ingredients-input"
-              placeholder="Example: Wheat flour, sugar, palm oil, emulsifier (E322), raising agents (E500), artificial flavour..."
+              placeholder="Example: Wheat flour, sugar, palm oil, maltodextrin, glucose syrup, emulsifier (E322), artificial flavour, preservative (E211)..."
               value={ingredientsText}
               onChange={(e) => setIngredientsText(e.target.value)}
-              rows={10}
+              rows={9}
             />
 
-            <button className="analyze-button" onClick={handleAnalyze} disabled={loading}>
-              {loading ? "Analyzing..." : "Analyze food processing"}
-            </button>
+            <div className="button-row">
+              <button className="analyze-button" onClick={handleAnalyze} disabled={loading}>
+                {loading ? "Analyzing..." : "Check processing level"}
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => {
+                  setIngredientsText(
+                    "Wheat flour, sugar, palm oil, maltodextrin, glucose syrup, emulsifier (E322), stabilizer (E415), artificial flavour, preservative (E211)"
+                  );
+                }}
+              >
+                Use sample data
+              </button>
+            </div>
 
-            {errorMsg && <p className="error-text">{errorMsg}</p>}
+            {errorMsg && <p className="error-text">⚠ {errorMsg}</p>}
           </div>
         </section>
 
         {result && (
           <section className="card result-card">
-            <h2>Analysis Result</h2>
-            <div className="result-grid">
+            <div className="result-header">
               <div>
-                <h3>Processing Level</h3>
-                <p className="badge">{result.processingLevel}</p>
+                <h2>Analysis result</h2>
+                <p className="hint">
+                  This score is generated by rule-based logic in a Netlify serverless function for prototype purposes.
+                </p>
               </div>
-              <div>
-                <h3>Recommended Frequency</h3>
-                <p>{result.frequency}</p>
+              <span className={processingBadgeClass}>{result.processingLevel}</span>
+            </div>
+
+            <div className="result-grid">
+              <div className="result-block">
+                <h3>Recommended frequency</h3>
+                <p className="result-text">{result.frequency}</p>
+              </div>
+              <div className="result-block">
+                <h3>Healthier alternatives</h3>
+                <ul className="alt-list">
+                  {result.alternatives.map((alt, index) => (
+                    <li key={index}>• {alt}</li>
+                  ))}
+                </ul>
               </div>
             </div>
 
-            <div className="alternatives">
-              <h3>Suggested Healthier Alternatives</h3>
-              <ul>
-                {result.alternatives.map((alt, index) => (
-                  <li key={index}>{alt}</li>
-                ))}
-              </ul>
+            <div className="tag-row">
+              <span className="tag">Prototype</span>
+              <span className="tag">Netlify Functions</span>
+              <span className="tag">Rule-based AI</span>
             </div>
 
             <p className="disclaimer">
-              *This is a prototype using simple rule-based logic on a backend function. In a full product, this
-              would be powered by a trained AI model and proper nutritional databases.
+              *In a production version, this logic can be replaced with a trained AI model, NOVA food classification,
+              and verified nutritional databases.
             </p>
           </section>
         )}
       </main>
+
+      <footer className="footer">
+        <span>Built as an Entrepreneurship & Innovation project</span>
+        <span className="dot" />
+        <span>Deployed on Netlify</span>
+      </footer>
     </div>
   );
 }
