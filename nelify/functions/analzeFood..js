@@ -1,6 +1,6 @@
 // netlify/functions/analyzeFood.js
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   try {
     if (event.httpMethod !== "POST") {
       return {
@@ -9,10 +9,20 @@ export const handler = async (event) => {
       };
     }
 
-    const body = JSON.parse(event.body || "{}");
-    const ingredientsText = (body.ingredientsText || "").toLowerCase();
+    let body;
+    try {
+      body = JSON.parse(event.body || "{}");
+    } catch (e) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Invalid JSON in request body" }),
+      };
+    }
 
-    if (!ingredientsText.trim()) {
+    const ingredientsTextRaw = body.ingredientsText || "";
+    const ingredientsText = ingredientsTextRaw.toLowerCase().trim();
+
+    if (!ingredientsText) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: "ingredientsText is required" }),
