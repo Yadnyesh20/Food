@@ -6,6 +6,7 @@ function App() {
   const [ingredientsText, setIngredientsText] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -18,118 +19,38 @@ function App() {
     reader.readAsDataURL(file);
   };
 
-  const classifyProcessing = (text) => {
-    const lower = text.toLowerCase();
-
-    const highlyProcessedKeywords = [
-      "emulsifier",
-      "stabilizer",
-      "artificial",
-      "flavour",
-      "flavor",
-      "colour",
-      "color",
-      "preservative",
-      "corn syrup",
-      "glucose syrup",
-      "high fructose",
-      "equivalent to",
-      "e202",
-      "e211",
-      "e621",
-      "e627",
-      "e631",
-    ];
-
-    const moderatelyProcessedKeywords = [
-      "refined flour",
-      "maida",
-      "corn starch",
-      "palm oil",
-      "hydrogenated",
-      "maltodextrin",
-      "invert sugar",
-      "lecithin",
-    ];
-
-    let score = 0;
-
-    highlyProcessedKeywords.forEach((k) => {
-      if (lower.includes(k)) score += 2;
-    });
-
-    moderatelyProcessedKeywords.forEach((k) => {
-      if (lower.includes(k)) score += 1;
-    });
-
-    let processingLevel = "Less processed";
-    let frequency = "Safe for everyday consumption (in reasonable portions).";
-
-    if (score >= 4) {
-      processingLevel = "Highly processed";
-      frequency = "Occasional treat only – about once a week or less.";
-    } else if (score >= 2) {
-      processingLevel = "Moderately processed";
-      frequency = "Limit to a few times per week.";
-    }
-
-    return { processingLevel, frequency };
-  };
-
-  const suggestAlternatives = (text) => {
-    const lower = text.toLowerCase();
-    const alternatives = new Set();
-
-    if (lower.includes("cereal") || lower.includes("flakes")) {
-      alternatives.add("Plain oats with fresh fruit");
-      alternatives.add("Homemade muesli with nuts and seeds");
-    }
-
-    if (lower.includes("biscuit") || lower.includes("cookie")) {
-      alternatives.add("Whole grain crackers without added sugar");
-      alternatives.add("Homemade biscuits using whole wheat flour and jaggery");
-    }
-
-    if (lower.includes("chips") || lower.includes("namkeen") || lower.includes("snack")) {
-      alternatives.add("Roasted chana or makhana");
-      alternatives.add("Homemade popcorn with minimal oil and salt");
-    }
-
-    if (lower.includes("drink") || lower.includes("juice") || lower.includes("beverage")) {
-      alternatives.add("Plain water infused with lemon or mint");
-      alternatives.add("Freshly made fruit juice without added sugar");
-    }
-
-    // Default suggestions if nothing matches
-    if (alternatives.size === 0) {
-      alternatives.add("Fresh fruits and seasonal salads");
-      alternatives.add("Homemade snacks with minimal ingredients");
-      alternatives.add("Products with short, simple ingredient lists");
-    }
-
-    return Array.from(alternatives);
-  };
-
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!ingredientsText.trim()) {
       alert("Please paste the ingredients list text.");
       return;
     }
 
     setLoading(true);
+    setErrorMsg("");
+    setResult(null);
 
-    // Simulate "AI thinking" delay for demo
-    setTimeout(() => {
-      const { processingLevel, frequency } = classifyProcessing(ingredientsText);
-      const alternatives = suggestAlternatives(ingredientsText);
-
-      setResult({
-        processingLevel,
-        frequency,
-        alternatives,
+    try {
+      const res = await fetch("/.netlify/functions/analyzeFood", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ingredientsText }),
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Something went wrong");
+      }
+
+      const data = await res.json();
+      setResult(data);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || "Failed to analyze food.");
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -146,7 +67,7 @@ function App() {
           <div className="left-panel">
             <h2>1. Upload ingredients image (optional)</h2>
             <p className="hint">
-              This is just for visual demo on the frontend. Actual text analysis is based on the text you paste below.
+              This is just for visual demo. The actual analysis is based on the text you paste on the right.
             </p>
             <label className="file-upload">
               <input type="file" accept="image/*" onChange={handleFileChange} />
@@ -174,6 +95,8 @@ function App() {
             <button className="analyze-button" onClick={handleAnalyze} disabled={loading}>
               {loading ? "Analyzing..." : "Analyze food processing"}
             </button>
+
+            {errorMsg && <p className="error-text">{errorMsg}</p>}
           </div>
         </section>
 
@@ -201,7 +124,7 @@ function App() {
             </div>
 
             <p className="disclaimer">
-              *This is a prototype using simple rule-based logic on the frontend. In a full product, this
+              *This is a prototype using simple rule-based logic on a backend function. In a full product, this
               would be powered by a trained AI model and proper nutritional databases.
             </p>
           </section>
